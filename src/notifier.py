@@ -16,7 +16,7 @@ class Notifier:
 
     def send(self, email):
         emails.Message(
-            subject="Course Sniper -- Your Course Is Open",
+            subject="PulseGT: Course Spot Found",
             mail_from=config_data["email"],
             text=f"{self.info}: {self.title}",
         ).send(

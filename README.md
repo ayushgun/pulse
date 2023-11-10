@@ -8,7 +8,7 @@ A registration aid for [Oscar](https://oscar.gatech.edu). Simple, effective, and
 
 To use this project, you need Python 3.8+ installed as well as pip on your device.
 
-- Clone the library `git clone https://github.com/ayushgun/Pulse`.
+- Clone the library `git clone https://github.com/ayushgun/pulse`.
 
 - Install the necessary requirements `pip3 install -r requirements.txt`.
 

@@ -24,6 +24,7 @@ class Notifier:
             smtp={
                 "host": "smtp.gmail.com",
                 "tls": True,
+                "port": 587,
                 "user": config_data["email"],
                 "password": config_data["password"],
             },

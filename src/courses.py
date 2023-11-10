@@ -1,13 +1,19 @@
 import re
-import time
 
-import notifier
 import requests
 from bs4 import BeautifulSoup
 
 
 class Course:
-    def __init__(self, crn: str, term: str):
+    def __init__(self, crn: str, term: str) -> None:
+        """
+        Initialize a Course object.
+
+        Args:
+            crn (str): The course registration number.
+            term (str): The term for the course.
+        """
+
         self.crn = crn
         self.term = term
         url = "https://oscar.gatech.edu/bprod/bwckschd.p_disp_detail_sched?term_in="
@@ -18,7 +24,14 @@ class Course:
                 headers = soup.find_all("th", class_="ddlabel")
                 self.name = headers[0].getText()
 
-    def __get_prereqs(self):
+    def __get_prereqs(self) -> str:
+        """
+        Fetches and returns the prerequisites for the course.
+
+        Returns:
+            str: A string listing the prerequisites.
+        """
+
         url = "https://oscar.gatech.edu/bprod/bwckschd.p_disp_detail_sched?term_in="
         url += self.term + "&crn_in=" + self.crn
 
@@ -31,6 +44,16 @@ class Course:
                 return txt[idx : len(txt) - 4]
 
     def __is_not_fodder(self, s: str) -> bool:
+        """
+        Determines if a string is not considered 'fodder' for parsing purposes.
+
+        Args:
+            s (str): The string to be evaluated.
+
+        Returns:
+            bool: True if the string is not fodder, False otherwise.
+        """
+
         fodder = [
             "undergraduate",
             "graduate",
@@ -46,7 +69,14 @@ class Course:
                 return False
         return True
 
-    def get_prereqs(self):
+    def get_prereqs(self) -> str:
+        """
+        Processes and returns a cleaned and parsed version of prerequisites.
+
+        Returns:
+            str: A processed string of prerequisites.
+        """
+
         try:
             raw = self.__get_prereqs()
             block = " ".join(
@@ -63,10 +93,17 @@ class Course:
         except:
             return "None"
 
-    def has_name(self) -> bool:
-        return self.name != None
+    def __get_registration_info(self, term: str) -> list[int]:
+        """
+        Fetches registration information for the course.
 
-    def __get_registration_info(self, term: str):
+        Args:
+            term (str): The term for which to fetch registration information.
+
+        Returns:
+            list[int]: A list containing registration information as integers.
+        """
+
         url = "https://oscar.gatech.edu/bprod/bwckschd.p_disp_detail_sched?term_in="
         url += term + "&crn_in=" + self.crn
 
@@ -86,7 +123,17 @@ class Course:
                 ]
                 return data
 
-    def get_registration_info(self, term: str):
+    def get_registration_info(self, term: str) -> dict[str, int]:
+        """
+        Processes and returns the registration information for a course.
+
+        Args:
+            term (str): The term for the course.
+
+        Returns:
+            dict[str, int]: A dictionary containing processed registration data.
+        """
+
         self.term = term
         data = self.__get_registration_info(term)
 
@@ -103,19 +150,60 @@ class Course:
         return load
 
     def is_open_by_term(self, term: str) -> bool:
+        """
+        Checks if the course is open for registration for a specific term.
+
+        Args:
+            term (str): The term to check.
+
+        Returns:
+            bool: True if the course is open, False otherwise.
+        """
+
         return self.__get_registration_info(term)[2] > 0
 
     def is_open(self) -> bool:
+        """
+        Checks if the course is open for registration for the current term.
+
+        Returns:
+            bool: True if the course is open, False otherwise.
+        """
+
         return self.is_open_by_term(self.term)
 
     def waitlist_available_by_term(self, term: str) -> bool:
+        """
+        Checks if there are available spots on the waitlist for a specific term.
+
+        Args:
+            term (str): The term to check.
+
+        Returns:
+            bool: True if waitlist spots are available, False otherwise.
+        """
+
         waitlist_data = self.get_registration_info(term)["waitlist"]
         return waitlist_data["vacant"] > 0
 
     def waitlist_available(self) -> bool:
+        """
+        Checks if there are available spots on the waitlist for the current term.
+
+        Returns:
+            bool: True if waitlist spots are available, False otherwise.
+        """
+
         return self.waitlist_available_by_term(self.term)
 
     def __str__(self) -> str:
+        """
+        Returns a string representation of the course, including registration and prerequisite information.
+
+        Returns:
+            str: A string representation of the course.
+        """
+
         data = self.get_registration_info(self.term)
         res = "{}\n".format(self.name)
         for name in data:
@@ -127,55 +215,3 @@ class Course:
         )
         res += "prerequisites: {}".format(self.get_prereqs())
         return res
-
-
-class WaitlistNotifier(notifier.Notifier):
-    def __init__(self, course: Course):
-        self.title = "Waitlist Available"
-        self.info, self.status_check = course.name, course.waitlist_available
-
-
-class OpenCourseNotifier(notifier.Notifier):
-    def __init__(self, course: Course):
-        self.title = "Course Open"
-        self.info, self.status_check = course.name, course.is_open
-
-
-class CourseList:
-    def __init__(self, courses_config):
-        self.courses_config = courses_config
-
-    def run_waitlist_notifiers(self):
-        for course, email in list(self.courses_config.courses):
-            if course.waitlist_available():
-                notif = WaitlistNotifier(course)
-                print(course)
-                notif.run_async(email)
-                self.courses_config.remove_course(course.crn)
-            time.sleep(5)
-
-    def run_available_courses(self):
-        for course, email in list(self.courses_config.courses):
-            if course.is_open():
-                notif = OpenCourseNotifier(course)
-                print(course)
-                notif.run_async(email)
-                self.courses_config.remove_course(course.crn)
-            time.sleep(5)
-
-    def run_notifiers(self):
-        while self.courses_config.courses:
-            self.run_available_courses()
-
-            # TODO: add waitlist spot detection
-            # self.run_waitlist_notifiers()
-
-    def get_info(self):
-        cnt = 0
-        for course, email in self.courses_config.courses:
-            notif = notifier.Notifier("Info", str(course))
-            if cnt > 0:
-                print("\n------------------------------------------\n")
-            print(course)
-            notif.run_force(email)
-            cnt += 1

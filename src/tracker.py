@@ -1,25 +1,94 @@
-import sys
+import time
 
-from courses import CourseList
-from datetime import datetime
-from config import CoursesConfig
+import config
+import notifier
+from courses import Course
 
-if len(sys.argv) < 3:
-    print(
-        "Could not run Pulse; include the desired upcoming term (Fall, Spring, Summer) and provide the config path"
-    )
-    sys.exit(1)
 
-season = sys.argv[1]
-now = datetime.now()
-term = ""
+class WaitlistNotifier(notifier.Notifier):
+    def __init__(self, course: Course) -> None:
+        """
+        Initializes a notifier for waitlist availability.
 
-if season.lower() == "spring":
-    term = f"{now.year + 1}" + "02" if now.month > 4 else f"{now.year}" + "02"
-else:
-    term = f"{now.year}" + "05" if season.lower() == "summer" else f"{now.year}" + "08"
+        Args:
+            course (Course): The course object to be monitored for waitlist availability.
+        """
 
-path = sys.argv[2]
-config = CoursesConfig(path, term)
-lst = CourseList(config)
-lst.run_notifiers()
+        self.title = "Waitlist Available"
+        self.info, self.status_check = course.name, course.waitlist_available
+
+
+class OpenCourseNotifier(notifier.Notifier):
+    def __init__(self, course: Course) -> None:
+        """
+        Initializes a notifier for course availability.
+
+        Args:
+            course (Course): The course object to be monitored for open registration.
+        """
+
+        self.title = "Course Open"
+        self.info, self.status_check = course.name, course.is_open
+
+
+class CourseList:
+    def __init__(self, courses_config: config.CoursesConfig) -> None:
+        """
+        Initializes a CourseList object.
+
+        Args:
+            courses_config (CoursesConfig): The configuration object containing course data.
+        """
+
+        self.courses_config = courses_config
+
+    def run_waitlist_notifiers(self) -> None:
+        """
+        Runs notifiers for all courses with an available waitlist.
+        """
+
+        for course, email in list(self.courses_config.courses):
+            if course.waitlist_available():
+                notif = WaitlistNotifier(course)
+                print(course)
+                notif.run_async(email)
+                self.courses_config.remove_course(course.crn)
+            time.sleep(3)
+
+    def run_available_courses(self) -> None:
+        """
+        Runs notifiers for all courses that are currently open for registration.
+        """
+
+        for course, email in list(self.courses_config.courses):
+            if course.is_open():
+                notif = OpenCourseNotifier(course)
+                print(course)
+                notif.run_async(email)
+                self.courses_config.remove_course(course.crn)
+            time.sleep(5)
+
+    def run_notifiers(self) -> None:
+        """
+        Continuously runs notifiers for available courses and waitlist spots.
+        """
+
+        while self.courses_config.courses:
+            self.run_available_courses()
+
+            # TODO: add waitlist spot detection
+            # self.run_waitlist_notifiers()
+
+    def get_info(self):
+        """
+        Prints information for each course in the configuration.
+        """
+
+        cnt = 0
+        for course, email in self.courses_config.courses:
+            notif = notifier.Notifier("Info", str(course))
+            if cnt > 0:
+                print("\n------------------------------------------\n")
+            print(course)
+            notif.run_force(email)
+            cnt += 1

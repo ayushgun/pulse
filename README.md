@@ -16,17 +16,18 @@ To use this project, you need Python 3.8+ installed as well as pip on your devic
 
 ### Server-side Application
 
-The simplest usage is to simply run `python src/tracker.py [SEASON] [CRN CONFIG].` in the CLI.
+The simplest usage is to simply run `python src/pulse.py [SEASON] [CRN CONFIG].` in the CLI.
 For the season, use 'spring', 'fall', or 'summer'. An example call is below
 
 ```sh
-user@computer:~$ python src/tracker.py fall crns.json
+user@computer:~$ python src/pulse.py fall crns.json
 ```
 
 ### API
 
 ```python
-from courses import Course, WaitlistNotifier
+from courses import Course
+from tracker import WaitlistNotifier
 
 myCourse = Course(crn, 'fall')
 notif = WaitlistNotifier(myCourse)

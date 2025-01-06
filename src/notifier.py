@@ -1,10 +1,4 @@
-import json
-
-import emails
-
-# Read in SMTP configuration data
-with open("smtp.json", "r") as file:
-    config_data = json.load(file)
+import requests
 
 
 class Notifier:
@@ -33,61 +27,47 @@ class Notifier:
         self.info = info
         self.status_check = state
 
-    def send(self, email: str) -> None:
+    def send(self, topic: str) -> None:
         """
-        Sends an email notification.
+        Sends a push notification to the specified ntfy topic.
 
         Args:
-            email (str): The recipient's email address.
+            topic (str): The ntfy topic to which the push notification is sent.
         """
-
-        message = emails.Message(
-            subject="PulseGT: Course Spot Found",
-            mail_from=config_data["email"],
-            text=f"{self.info}: {self.title}",
-        )
-        message.send(
-            to=email,
-            smtp={
-                "host": "smtp.gmail.com",
-                "tls": True,
-                "port": 587,
-                "user": config_data["email"],
-                "password": config_data["password"],
-            },
+        message = f"{self.info}: {self.title}"
+        requests.post(
+            f"https://ntfy.sh/{topic}",
+            data=message.encode("utf-8"),
         )
 
-        print(f"Sent email to {email}")
+        print(f"Sent ntfy push to topic '{topic}'")
 
-    def run(self, email: str) -> None:
+    def run(self, topic: str) -> None:
         """
-        Continuously checks the status and sends an email if the status_check returns True.
+        Continuously checks the status and sends a push notification if the status_check returns True.
 
         Args:
-            email (str): The recipient's email address.
+            topic (str): The ntfy topic to which the push notification is sent.
         """
-
         while not self.status_check():
             continue
-        self.send(email)
+        self.send(topic)
 
-    def run_async(self, email: str) -> None:
+    def run_async(self, topic: str) -> None:
         """
-        Sends an email asynchronously if the status_check returns True.
+        Sends a push notification asynchronously if the status_check returns True.
 
         Args:
-            email (str): The recipient's email address.
+            topic (str): The ntfy topic to which the push notification is sent.
         """
-
         if self.status_check():
-            self.send(email)
+            self.send(topic)
 
-    def run_force(self, email: str) -> None:
+    def run_force(self, topic: str) -> None:
         """
-        Forcibly sends an email regardless of the status_check result.
+        Forcibly sends a push notification regardless of the status_check result.
 
         Args:
-            email (str): The recipient's email address.
+            topic (str): The ntfy topic to which the push notification is sent.
         """
-
-        self.send(email)
+        self.send(topic)

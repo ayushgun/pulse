@@ -21,20 +21,20 @@ class CoursesConfig:
         """
         Builds a list of courses from the configuration file.
 
-        Each item in the list is a tuple containing a Course object and an email string.
+        Each item in the list is a tuple containing a Course object and a ntfy topic string.
 
         Returns:
-            list[tuple[Course, str]]: A list of tuples containing Course objects and corresponding emails.
+            list[tuple[Course, str]]: A list of tuples containing Course objects and corresponding topics.
         """
 
         # Load the config file
         with open(self.path, "r") as file:
             config_data = json.load(file)
 
-        # Build the list of tuples (Course object, email)
+        # Build the list of tuples (Course object, topic)
         courses = [
-            (Course(course_id, self.term), email)
-            for email, course_ids in config_data.items()
+            (Course(course_id, self.term), topic)
+            for topic, course_ids in config_data.items()
             for course_id in course_ids
         ]
         return courses
@@ -53,14 +53,14 @@ class CoursesConfig:
 
         # Remove the course from the config data
         updated = False
-        for email, course_ids in config_data.items():
+        for topic, course_ids in config_data.items():
             if course_id in course_ids:
                 course_ids.remove(course_id)
                 updated = True
 
-                # Remove the email key if it has no more course ids
+                # Remove the topic key if it has no more course IDs
                 if not course_ids:
-                    del config_data[email]
+                    del config_data[topic]
                 break
 
         # Update the courses list by rebuilding it

@@ -6,7 +6,11 @@ Pulse is a fast Python application to track open course spots and waitlist avail
 
 ## Installation
 
-**Requirements:** Python 3.8+, `pip`. **Steps:** 1. Clone the repository: `git clone https://github.com/ayushgun/pulse`. 2. Install dependencies: `pip3 install -r requirements.txt`.
+**Requirements:** Python 3.8+, `pip`. 
+
+**Steps:** 
+1. Clone the repository: `git clone https://github.com/ayushgun/pulse`.
+2. 2. Install dependencies: `pip3 install -r requirements.txt`.
 
 ## Usage
 

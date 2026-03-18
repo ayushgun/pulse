@@ -1,5 +1,3 @@
-import re
-
 import requests
 from bs4 import BeautifulSoup
 
@@ -16,82 +14,15 @@ class Course:
 
         self.crn = crn
         self.term = term
-        url = "https://oscar.gatech.edu/bprod/bwckschd.p_disp_detail_sched?term_in="
-        url += self.term + "&crn_in=" + self.crn
+        url = "https://registration.banner.gatech.edu/StudentRegistrationSsb/ssb/searchResults/getClassDetails?term="
+        url += self.term + "&courseReferenceNumber=" + self.crn
         with requests.Session() as s:
             with s.get(url) as page:
                 soup = BeautifulSoup(page.content, "html.parser")
-                headers = soup.find_all("th", class_="ddlabel")
-                self.name = headers[0].getText()
-
-    def __get_prereqs(self) -> str:
-        """
-        Fetches and returns the prerequisites for the course.
-
-        Returns:
-            str: A string listing the prerequisites.
-        """
-
-        url = "https://oscar.gatech.edu/bprod/bwckschd.p_disp_detail_sched?term_in="
-        url += self.term + "&crn_in=" + self.crn
-
-        with requests.Session() as s:
-            with s.get(url) as page:
-                soup = BeautifulSoup(page.content, "html.parser")
-                p = soup.find("td", class_="dddefault")
-                txt = p.getText()
-                idx = txt.index("Prerequisites:")
-                return txt[idx : len(txt) - 4]
-
-    def __is_not_fodder(self, s: str) -> bool:
-        """
-        Determines if a string is not considered 'fodder' for parsing purposes.
-
-        Args:
-            s (str): The string to be evaluated.
-
-        Returns:
-            bool: True if the string is not fodder, False otherwise.
-        """
-
-        fodder = [
-            "undergraduate",
-            "graduate",
-            "level",
-            "grade",
-            "of",
-            "minimum",
-            "semester",
-        ]
-        tmp = s.lower()
-        for fod in fodder:
-            if fod == tmp:
-                return False
-        return True
-
-    def get_prereqs(self) -> str:
-        """
-        Processes and returns a cleaned and parsed version of prerequisites.
-
-        Returns:
-            str: A processed string of prerequisites.
-        """
-
-        try:
-            raw = self.__get_prereqs()
-            block = " ".join(
-                list(
-                    filter(
-                        lambda el: self.__is_not_fodder(el),
-                        raw[raw.index("\n") + 3 :].split(),
-                    )
-                )
-            )
-            els = re.findall('\[[^\]]*\]|\([^\)]*\)|"[^"]*"|\S+', block)
-            parsed = " ".join(els).replace("(Undergraduate ", "(")
-            return parsed
-        except:
-            return "None"
+                title = soup.find("span", id="courseTitle").getText()
+                number = soup.find("span", id="courseNumber").getText()
+                subject = soup.find("span", id="subject").getText()
+                self.name = subject + " " + number + " - " + title
 
     def __get_registration_info(self, term: str) -> list[int]:
         """
@@ -104,23 +35,18 @@ class Course:
             list[int]: A list containing registration information as integers.
         """
 
-        url = "https://oscar.gatech.edu/bprod/bwckschd.p_disp_detail_sched?term_in="
-        url += term + "&crn_in=" + self.crn
+        url = "https://registration.banner.gatech.edu/StudentRegistrationSsb/ssb/searchResults/getEnrollmentInfo?term="
+        url += term + "&courseReferenceNumber=" + self.crn
 
         with requests.Session() as s:
             with s.get(url) as page:
                 soup = BeautifulSoup(page.content, "html.parser")
-                table = soup.find(
-                    "caption", string="Registration Availability"
-                ).find_parent("table")
-
-                if len(table) == 0:
-                    raise ValueError()
-
                 data = [
                     int(info.getText())
-                    for info in table.findAll("td", class_="dddefault")
+                    for info in soup.find_all("span", dir="ltr")
                 ]
+                # jank, ayush come up with a better one-liner 
+                data[0], data[1] = data[1], data[0]
                 return data
 
     def get_registration_info(self, term: str) -> dict[str, int]:
@@ -198,7 +124,7 @@ class Course:
 
     def __str__(self) -> str:
         """
-        Returns a string representation of the course, including registration and prerequisite information.
+        Returns a string representation of the course, including registration information and waitlist status.
 
         Returns:
             str: A string representation of the course.
@@ -210,8 +136,7 @@ class Course:
             if name == "waitlist":
                 continue
             res += "{}:\t{}\n".format(name, data[name])
-        res += "waitlist open: {}\n".format(
+        res += "waitlist open: {}".format(
             "yes" if self.waitlist_available() else "no"
         )
-        res += "prerequisites: {}".format(self.get_prereqs())
         return res
